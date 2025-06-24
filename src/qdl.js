@@ -378,4 +378,12 @@ export class qdlDevice {
     await this.firehose.cmdReset();
     return true;
   }
+
+  setFirehoseForTest(firehoseLike) {
+  this.#firehose = firehoseLike instanceof Firehose
+    ? firehoseLike
+    : Object.assign(new Firehose(firehoseLike.cdc), firehoseLike);
+
+  return this.#firehose;
+}
 }

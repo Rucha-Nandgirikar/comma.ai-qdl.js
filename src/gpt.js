@@ -78,6 +78,9 @@ export class GPT {
     this.sectorSize = sectorSize;
   }
 
+  set _mockHeader(data) {
+  this.#header = GPTHeader.from(data.slice());
+  } 
   get headerCrc32() {
     return this.#header.headerCrc32;
   }
@@ -89,9 +92,16 @@ export class GPT {
   get currentLba() {
     return this.#header.currentLba;
   }
+   set currentLba(currentLba) {
+    this.#header.currentLba = currentLba;
+  }
 
   get alternateLba() {
     return this.#header.alternateLba;
+  }
+  set alternateLba(alternateLba)
+  {
+    this.#header.alternateLba = alternateLba;
   }
 
   get firstUsableLba() {
@@ -106,8 +116,17 @@ export class GPT {
     return this.#header.partEntriesStartLba;
   }
 
+  set partEntriesStartLba(partEntriesStartLba) {
+    this.#header.partEntriesStartLba = partEntriesStartLba;
+  }
+
   get numPartEntries() {
     return this.#header.numPartEntries;
+  }
+
+  set numPartEntries(numPartEntries)
+  {
+    this.#header.numPartEntries = numPartEntries; 
   }
 
   get partEntrySize() {
@@ -116,6 +135,10 @@ export class GPT {
 
   get partEntriesSectors() {
     return Math.ceil(Number(this.numPartEntries * this.partEntrySize / this.sectorSize));
+  }
+
+  setHeaderForTest(header) {
+    this.#header = GPTHeader.from(GPTHeader.to(header));;
   }
 
   /**
@@ -196,6 +219,14 @@ export class GPT {
   }
 
   /**
+ * Set part entries directly (for testing purposes only).
+ * @param {Array} partEntries
+ */
+setPartEntriesForTest(partEntries) {
+  this.#partEntries = partEntries;
+}
+
+  /**
    * @param {Uint8Array} [partEntries]
    * @returns {Uint8Array}
    */
@@ -215,6 +246,11 @@ export class GPT {
 
     return new Uint8Array(this.#header.$toBuffer());
   }
+
+  setbuildHeaderForTest(headerData) {
+  // Wrap raw object as a proper GPTHeader struct instance
+  this.#header = GPTHeader.from(GPTHeader.to(headerData));
+}
 
   /** @returns {Partition[]} */
   getPartitions() {

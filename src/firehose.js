@@ -369,4 +369,8 @@ export class Firehose {
   flushDeviceMessages() {
     logger.flushDeviceMessages()
   }
+  
+   setFirehoseLUNSForTest(mock) {
+    this.luns = mock;
+  }
 }

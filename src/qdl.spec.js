@@ -2,7 +2,7 @@ import { test, expect, describe } from "bun:test";
 import { GPT } from "./gpt.js"
 import { Sparse } from "./sparse.js";
 import { qdlDevice } from "./qdl.js";
-import { bytes, int32, string, struct, uint32, uint64 } from "@incognitojam/tiny-struct";
+import { struct, uint64 } from "@incognitojam/tiny-struct";
 import { guid, utf16cstring } from "./gpt-structs";
 
 
@@ -18,7 +18,7 @@ describe("qdl > connect", () => {
     read: async () => new Uint8Array(),
   };
 
-  test("success: Sahara to firehose mode", async () => {
+  test("success: should return sahara firehose mode", async () => {
 
     const sahara = {
       connect: async () => "sahara",
@@ -68,7 +68,7 @@ describe(("qdl > reset"), async () => {
   const qdl = new qdlDevice(programmer);
   qdl.setFirehoseForTest(cdc);
 
-  test("success: should call firehose.cmdReset and return true", async () => {
+  test("success: should reset firehose and return true", async () => {
     qdl.firehose.cmdReset = async () => {
       return true;
     };
@@ -117,7 +117,8 @@ describe("qdl > detectPartition", () => {
   qdl.getGpt = async (lun) => ({
     locatePartition: (name) => (lun === 2 && name === "userdata" ? partition_1 : null),
   });
-  test("success Partition detected", async () => {
+
+  test("success: should return array if partition detected", async () => {
     qdl.firehose.luns = [1, 2, 3, 4, 5];
     qdl.getGpt = async (lun) => ({
       locatePartition: (name) => (lun === 2 && name === "userdata" ? partition_1 : null),
@@ -129,7 +130,7 @@ describe("qdl > detectPartition", () => {
     expect(g).toBeDefined();
   });
 
-  test("failure: Partition not detected", async () => {
+  test("failure: should return [false,undefined, undefined, undefined] if partition not detected", async () => {
     qdl.firehose.setFirehoseLUNSForTest([]);
     qdl.getGpt = async (lun) => ({
       locatePartition: (name) => (lun === 2 && name === "userdata" ? partition_2 : null),
@@ -167,7 +168,7 @@ describe("qdl > erase", () => {
     name: "userdata",
   };
 
-  test("success erased!", async () => {
+  test("success: should return true if partition detected and erase", async () => {
 
     qdl.detectPartition = async () => {
       return [true, 2, partition_1, gpt];
@@ -184,7 +185,7 @@ describe("qdl > erase", () => {
   });
 
 
-  test("success Partition ${name} not found", async () => {
+  test("success should throw Partition ${name} not found if partition was not detected", async () => {
     const name = "userdata";
     qdl.detectPartition = async () => {
       return [false, undefined, undefined, undefined];
@@ -216,7 +217,7 @@ describe("qdl > getDevicePartitionsInfo", () => {
 
   qdl.setFirehoseForTest(cdc);
 
-  test("success", async () => {
+  test("should return parition info", async () => {
     qdl.firehose.luns = [1, 2, 3, 4, 5];
 
     qdl.getGpt = async () => ({
@@ -231,7 +232,7 @@ describe("qdl > getDevicePartitionsInfo", () => {
 
   });
 
-  test("Failure", async () => {
+  test("should return empty response", async () => {
     qdl.firehose.luns = [];
 
     qdl.getGpt = async () => ({
@@ -255,7 +256,7 @@ describe("qdl > getActiveSlot", () => {
     read: async () => new Uint8Array(),
   };
   qdl.setFirehoseForTest(cdc);
-  test("success: returns first detected active slot", async () => {
+  test("should return first detected active slot", async () => {
     qdl.firehose.luns = [1, 2, 3, 4, 5];
 
     qdl.getGpt = async (lun) => ({
@@ -266,7 +267,7 @@ describe("qdl > getActiveSlot", () => {
     expect(result).toBe("b");
   });
 
-  test("failure: no active slot found", async () => {
+  test("should throw Can't detect slot A or B", async () => {
     qdl.firehose.luns = [1, 2, 3, 4, 5];
 
     qdl.getGpt = async () => ({
@@ -291,7 +292,7 @@ describe("qdl > getStorageInfo", () => {
   };
   qdl.setFirehoseForTest(cdc);
 
-  test("success: parses storage_info from INFO log line", async () => {
+  test("should parse storage_info from INFO log line", async () => {
     const infoLine =
       'INFO: {"storage_info":{"eol":"2025","capacity":"128GB","vendor":"Samsung"}}';
     qdl.firehose.cmdGetStorageInfo = async () => [infoLine];
@@ -301,7 +302,7 @@ describe("qdl > getStorageInfo", () => {
     expect(result).toEqual(parsed);
   });
 
-  test("failure: Malformed JSON throws parse error", async () => {
+  test("should throw Failed to parse storage info JSON", async () => {
 
     qdl.firehose.cmdGetStorageInfo = async () => {
       return [
@@ -312,7 +313,7 @@ describe("qdl > getStorageInfo", () => {
     expect(qdl.getStorageInfo()).rejects.toThrow("Failed to parse storage info JSON");
   });
 
-  test("failure: Storage info JSON not returned - not implemented?", async () => {
+  test("should throw Storage info JSON not returned - not implemented?", async () => {
 
     qdl.firehose.cmdGetStorageInfo = async () => {
       return [
@@ -343,7 +344,7 @@ describe("qdl > flashBlob", () => {
 
   qdl.detectPartition = async () => { return [true, 0, { start: 2048n, sectors: 4096n, name: "userdata" }, gpt]; };
 
-  test("success: flashBlob with sparse blob should program all chunks", async () => {
+  test("should return true if flashBlob with sparse blob", async () => {
     const sparse = {
       read: async function* () {
         yield [0, new Blob([new Uint8Array(512)])];       // 512 bytes
@@ -368,7 +369,7 @@ describe("qdl > flashBlob", () => {
   });
 
 
-  test("failure: flashBlob with sparse == null", async () => {
+  test("should return false if flashBlob with sparse blob == null", async () => {
     const sparse = null;
     Sparse.from = async () => sparse;
     qdl.firehose.cmdErase = async () => true;
@@ -387,7 +388,7 @@ describe("qdl > flashBlob", () => {
 
   });
 
-  test("failure: flashBlob with eraseBeforeFlashSparse == false", async () => {
+  test("should return true if flashBlob with eraseBeforeFlashSparse == false", async () => {
     const sparse = {
       read: async function* () {
         yield [0, new Blob([new Uint8Array(512)])];       // 512 bytes
@@ -443,7 +444,7 @@ describe("qdl > eraseLun", () => {
 
   const partition_2 = null;
 
-  test("success", async () => {
+  test("should return true if firhose erases LUN", async () => {
 
     qdl.getGpt = async () => ({
       currentLba: 20n,
@@ -465,7 +466,7 @@ describe("qdl > eraseLun", () => {
     await expect(qdl.eraseLun(lun, preservePartitions)).resolves.toBe(true);
   });
 
-  test("failure", async () => {
+  test("should return false if firehose.cmdErase returns false", async () => {
     qdl.getGpt = async () => ({
       currentLba: 20n,
       alternateLba: 4096n,
@@ -486,7 +487,7 @@ describe("qdl > eraseLun", () => {
     await expect(qdl.eraseLun(lun, preservePartitions)).resolves.toBe(false);
   });
 
-  test("part == undefined", async () => {
+  test("should return false if part == undefined", async () => {
     qdl.getGpt = async () => ({
       currentLba: 20n,
       alternateLba: 4096n,
@@ -515,22 +516,6 @@ describe("qdl > getGPT", () => {
   const sectorSize = 4096;
   const qdl = new qdlDevice(new ArrayBuffer(1));
 
-  // const GPTHeader = struct("GPTHeader", {
-  //   signature: string(8),
-  //   revision: uint32(),
-  //   headerSize: uint32(),
-  //   headerCrc32: int32(),
-  //   reserved: uint32(),
-  //   currentLba: uint64(),
-  //   alternateLba: uint64(),
-  //   firstUsableLba: uint64(),
-  //   lastUsableLba: uint64(),
-  //   diskGuid: bytes(16),
-  //   partEntriesStartLba: uint64(),
-  //   numPartEntries: uint32(),
-  //   partEntrySize: uint32(),
-  //   partEntriesCrc32: int32(),
-  // }, { littleEndian: true });
 
   const GPTPartitionEntry = struct("GPTPartitionEntry", {
     type: guid(),
@@ -541,7 +526,7 @@ describe("qdl > getGPT", () => {
     name: utf16cstring(36),
   }, { littleEndian: true });
 
-  test("successfully parses GPT using real GPT class methods without mocks or monkey patching", async () => {
+  test("should return primary GPT object if sector != undefined", async () => {
 
     // Create GPT instance and set header
     const primaryGpt = new GPT(sectorSize);
@@ -610,235 +595,14 @@ describe("qdl > getGPT", () => {
     expect(result).toBeInstanceOf(GPT);
     expect(result.currentLba).toBe(1n);
   });
-
-  //   test("getGpt falls back to backup GPT when primary is corrupted", async () => {
-
-  //   // Setup dummy GPTs
-  //   const corruptedPrimary = new GPT(sectorSize);
-  //   const validBackup = new GPT(sectorSize);
-
-  //   corruptedPrimary.setHeaderForTest({
-  //     signature: "EFI PART",
-  //     revision: 0x10000,
-  //     headerSize: 92,
-  //     headerCrc32: 1234, // Will mismatch intentionally
-  //     reserved: 0,
-  //     currentLba: 1n,
-  //     alternateLba: 1000n,
-  //     firstUsableLba: 34n,
-  //     lastUsableLba: 999n,
-  //     diskGuid: new Uint8Array(16).fill(0xaa),
-  //     partEntriesStartLba: 2n,
-  //     numPartEntries: 128,
-  //     partEntrySize: 128,
-  //     partEntriesCrc32: 1234, // mismatch
-  //   });
-
-  //   validBackup.setHeaderForTest({
-  //     signature: "EFI PART",
-  //     revision: 0x10000,
-  //     headerSize: 92,
-  //     headerCrc32: 5678,
-  //     reserved: 0,
-  //     currentLba: 1000n,
-  //     alternateLba: 1n,
-  //     firstUsableLba: 34n,
-  //     lastUsableLba: 999n,
-  //     diskGuid: new Uint8Array(16).fill(0xbb),
-  //     partEntriesStartLba: 900n,
-  //     numPartEntries: 128,
-  //     partEntrySize: 128,
-  //     partEntriesCrc32: 5678,
-  //   });
-
-  //   // Dummy GPTPartitionEntry struct
-  //   const GPTPartitionEntry = struct("GPTPartitionEntry", {
-  //     type: guid(),
-  //     unique: guid(),
-  //     startingLba: uint64(),
-  //     endingLba: uint64(),
-  //     attributes: uint64(),
-  //     name: utf16cstring(36),
-  //   }, { littleEndian: true });
-
-  //   const dummyEntry = GPTPartitionEntry.from(GPTPartitionEntry.to({
-  //     type: "00000000-0000-0000-0000-000000000000",
-  //     unique: "00000000-0000-0000-0000-000000000000",
-  //     startingLba: 0n,
-  //     endingLba: 0n,
-  //     attributes: 0n,
-  //     name: "",
-  //   }));
-
-  //   corruptedPrimary.setPartEntriesForTest(Array(128).fill(dummyEntry));
-  //   validBackup.setPartEntriesForTest(Array(128).fill(dummyEntry));
-
-  //   const corruptedHeaderBuffer = corruptedPrimary.buildHeader();
-  //   const corruptedPartEntriesBuffer = corruptedPrimary.buildPartEntries();
-
-  //   const validHeaderBuffer = validBackup.buildHeader();
-  //   const validPartEntriesBuffer = validBackup.buildPartEntries();
-
-  //   qdl.setFirehoseForTest({
-  //     cfg: {
-  //       SECTOR_SIZE_IN_BYTES: sectorSize,
-  //     },
-  //     cdc: {
-  //       write: async () => {},
-  //       read: async () => new Uint8Array(sectorSize),
-  //       connected: true,
-  //     },
-  //     waitForData: async () => new TextEncoder().encode(`
-  //       <data>
-  //         <response value="ACK" rawmode="true"/>
-  //       </data>
-  //     `),
-  //     xml: {
-  //       getResponse: () => ({ value: "ACK", rawmode: "true" }),
-  //       getLog: () => [],
-  //     },
-  //     cmdReadBuffer: async (_lun, sector, _count) => {
-  //       if (sector === 1n) return corruptedHeaderBuffer;
-  //       if (sector === 2n) return corruptedPartEntriesBuffer;
-
-  //       if (sector === 1000n) return validHeaderBuffer;
-  //       if (sector === 900n) return validPartEntriesBuffer;
-
-  //       throw new Error(`Unexpected sector read: ${sector}`);
-  //     },
-  //     luns: [lun],
-  //   });
-
-  //   const result = await qdl.getGpt(lun);
-
-  //   expect(result).toBeInstanceOf(GPT);
-  //   expect(result.currentLba).toBe(1000n); // Returned backup
-  // });
-
-  // test("getGpt falls back to backup GPT when primary is corrupted", async () => {
-  //   // const lun = 2;
-  //   // const sectorSize = 4096;
-  //   // const qdl = new qdlDevice(new ArrayBuffer(1));
-
-  //   // Define dummy GPTPartitionEntry
-  //   const GPTPartitionEntry = struct("GPTPartitionEntry", {
-  //     type: guid(),
-  //     unique: guid(),
-  //     startingLba: uint64(),
-  //     endingLba: uint64(),
-  //     attributes: uint64(),
-  //     name: utf16cstring(36),
-  //   }, { littleEndian: true });
-
-  //   const dummyEntry = GPTPartitionEntry.from(GPTPartitionEntry.to({
-  //     type: "00000000-0000-0000-0000-000000000000",
-  //     unique: "00000000-0000-0000-0000-000000000000",
-  //     startingLba: 0n,
-  //     endingLba: 0n,
-  //     attributes: 0n,
-  //     name: "",
-  //   }));
-
-  //   // Prepare dummy data for both GPTs
-  //   const primaryGpt = new GPT(sectorSize);
-  //   primaryGpt.setHeaderForTest({
-  //     signature: "EFI PART",
-  //     revision: 0x10000,
-  //     headerSize: 92,
-  //     headerCrc32: 1234, // invalid
-  //     reserved: 0,
-  //     currentLba: 1n,
-  //     alternateLba: 1000n,
-  //     firstUsableLba: 34n,
-  //     lastUsableLba: 999n,
-  //     diskGuid: new Uint8Array(16).fill(0xab),
-  //     partEntriesStartLba: 2n,
-  //     numPartEntries: 128,
-  //     partEntrySize: 128,
-  //     partEntriesCrc32: 1111, // invalid
-  //   });
-  //   primaryGpt.setPartEntriesForTest(Array(128).fill(dummyEntry));
-
-  //   const backupGpt = new GPT(sectorSize);
-  //   backupGpt.setHeaderForTest({
-  //     signature: "EFI PART",
-  //     revision: 0x10000,
-  //     headerSize: 92,
-  //     headerCrc32: 5678,
-  //     reserved: 0,
-  //     currentLba: 1000n,
-  //     alternateLba: 1n,
-  //     firstUsableLba: 34n,
-  //     lastUsableLba: 999n,
-  //     diskGuid: new Uint8Array(16).fill(0xbb),
-  //     partEntriesStartLba: 900n,
-  //     numPartEntries: 128,
-  //     partEntrySize: 128,
-  //     partEntriesCrc32: 5678,
-  //   });
-  //   backupGpt.setPartEntriesForTest(Array(128).fill(dummyEntry));
-
-  //   const primaryHeaderBuffer = primaryGpt.buildHeader();
-  //   const primaryPartEntriesBuffer = primaryGpt.buildPartEntries();
-  //   const backupHeaderBuffer = backupGpt.buildHeader();
-  //   const backupPartEntriesBuffer = backupGpt.buildPartEntries();
-
-  //   // Override methods to simulate mismatchCrc32 in primary
-  //   GPT.prototype.parseHeader = function (buffer, lba) {
-  //     const hdr = GPTHeader.from(buffer);
-  //     hdr.currentLba = lba;
-  //     hdr.mismatchCrc32 = (lba === 1n); // Simulate corrupted primary
-  //     return hdr;
-  //   };
-
-  //   GPT.prototype.parsePartEntries = function (buffer) {
-  //     return {
-  //       entries: Array(128).fill(dummyEntry),
-  //       partEntriesCrc32: 1234,
-  //       mismatchCrc32: true,
-  //     };
-  //   };
-
-  //   qdl.setFirehoseForTest({
-  //     cfg: { SECTOR_SIZE_IN_BYTES: sectorSize },
-  //     cdc: {
-  //       write: async () => {},
-  //       read: async () => new Uint8Array(sectorSize),
-  //       connected: true,
-  //     },
-  //     waitForData: async () => new TextEncoder().encode(`
-  //       <data><response value="ACK" rawmode="true"/></data>
-  //     `),
-  //     xml: {
-  //       getResponse: () => ({ value: "ACK", rawmode: "true" }),
-  //       getLog: () => [],
-  //     },
-  //     cmdReadBuffer: async (_lun, sector) => {
-  //       if (sector === 1n) return primaryHeaderBuffer;
-  //       if (sector === 2n) return primaryPartEntriesBuffer;
-  //       if (sector === 1000n) return backupHeaderBuffer;
-  //       if (sector === 900n) return backupPartEntriesBuffer;
-  //       throw new Error(`Unexpected sector read: ${sector}`);
-  //     },
-  //     luns: [lun],
-  //   });
-
-  //   const result = await qdl.getGpt(lun);
-
-  //   expect(result).toBeInstanceOf(GPT);
-  //   expect(result.currentLba).toBe(1000n); // ✅ Confirm backup was used
-  // });
-
-
 })
 
 describe("qdl > repairGpt", () => {
+  const lun = 2;
+  const sectorSize = 4096;
+  const qdl = new qdlDevice(new ArrayBuffer(1));
 
-  test("successfully repairs GPT using real GPT class methods", async () => {
-    const lun = 2;
-    const sectorSize = 4096;
-    const qdl = new qdlDevice(new ArrayBuffer(1));
-
+  test("should return true if primaryGPT is repaired", async () => {
     // Construct primary GPT header
     const primaryGpt = new GPT(sectorSize);
     primaryGpt.setHeaderForTest({
@@ -935,11 +699,12 @@ describe("qdl > repairGpt", () => {
 });
 
 describe("qdl > setActiveSlot", () => {
-  test("successfully sets active slot 'a' across all GPT headers", async () => {
-    const lun = 2;
-    const sectorSize = 4096;
-    const slot = "a";
-    const qdl = new qdlDevice(new ArrayBuffer(1));
+  const lun = 2;
+  const sectorSize = 4096;
+  const slot = "a";
+  const qdl = new qdlDevice(new ArrayBuffer(1));
+  test("should return true if an active slot it set", async () => {
+
 
     const GPTPartitionEntry = struct("GPTPartitionEntry", {
       type: guid(),
@@ -1058,9 +823,7 @@ describe("qdl > setActiveSlot", () => {
     expect(sectorsWritten).toContain(backupGpt.currentLba);
   });
 
-  test("Failure: setActiveSlot throws on invalid slot", async () => {
-    const qdl = new qdlDevice(new ArrayBuffer(1));
-
+  test("shoudl throw if slot is an Invalid slot", async () => {
     qdl.setFirehoseForTest({ luns: [] });
 
     await expect(qdl.setActiveSlot("invalid")).rejects.toThrow("Invalid slot");
